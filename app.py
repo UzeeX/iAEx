@@ -10,12 +10,18 @@ st.set_page_config(page_title="IA Gestion Privée – QC Advisors", layout="cent
 st.title("📊 IA Gestion Privée – Québec Advisors Extractor")
 st.write("Extract all Québec-based advisors and export them as a CSV.")
 
-@st.cache_data(show_spinner=False)
 def scrape_qc_advisors():
     rows = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+            ],
+        )
         page = browser.new_page()
         page.goto(URL, timeout=60000)
 
@@ -40,7 +46,6 @@ def scrape_qc_advisors():
             email_el = advisor.query_selector("a[href^='mailto:']")
             email = email_el.get_attribute("href").replace("mailto:", "") if email_el else ""
 
-            # Keep Québec only
             if "QC" in address or "Québec" in address:
                 rows.append({
                     "Name": name,
@@ -64,10 +69,9 @@ if st.button("🚀 Run Québec Advisor Extraction"):
         st.success(f"Found {len(df)} Québec advisors")
         st.dataframe(df, use_container_width=True)
 
-        csv = df.to_csv(index=False).encode("utf-8")
         st.download_button(
             "⬇️ Download CSV",
-            csv,
+            df.to_csv(index=False).encode("utf-8"),
             "ia_gestion_privee_quebec_advisors.csv",
             "text/csv"
         )
